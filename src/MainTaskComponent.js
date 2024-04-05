@@ -6,8 +6,7 @@ const MainTaskComponent = () => {
   const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [selectedSymbols, setSelectedSymbols] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [initialPositions, setInitialPositions] = useState({});
+  const [dragOffsets, setDragOffsets] = useState({});
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
@@ -49,23 +48,22 @@ const MainTaskComponent = () => {
 
   const handleMouseDown = (e, index) => {
     e.preventDefault();
-    const ctrlPressed = e.ctrlKey || e.metaKey; // Check for Ctrl or Cmd key
+    const ctrlPressed = e.ctrlKey || e.metaKey;
     if (ctrlPressed) {
       toggleSymbolSelection(index);
     } else {
       selectSymbol(index);
     }
     setIsDragging(true);
-    const symbol = symbols[index];
-    const offsetX = e.clientX - symbol.x;
-    const offsetY = e.clientY - symbol.y;
-    setDragOffset({ x: offsetX, y: offsetY });
 
-    const initialPos = {};
+    const updatedOffsets = { ...dragOffsets }; 
     selectedSymbols.forEach((i) => {
-      initialPos[i] = { x: symbols[i].x, y: symbols[i].y };
+      updatedOffsets[i] = {
+        x: e.clientX - symbols[i].x,
+        y: e.clientY - symbols[i].y,
+      };
     });
-    setInitialPositions(initialPos);
+    setDragOffsets(updatedOffsets);
   };
 
   const toggleSymbolSelection = (index) => {
@@ -90,23 +88,43 @@ const MainTaskComponent = () => {
     if (isDragging && selectedSymbols.length > 0) {
       const updatedSymbols = symbols.map((symbol, index) => {
         if (selectedSymbols.includes(index)) {
-          const newX = e.clientX - dragOffset.x;
-          const newY = e.clientY - dragOffset.y;
-          return {
-            ...symbol,
-            x: newX,
-            y: newY,
-          };
+          if (dragOffsets[index]) {
+            const offsetX = e.clientX - dragOffsets[index].x;
+            const offsetY = e.clientY - dragOffsets[index].y;
+            
+      
+            let collisionIndex = -1;
+            symbols.forEach((s, i) => {
+              if (i !== index && offsetX >= s.x && offsetX <= s.x + 15 && offsetY >= s.y && offsetY <= s.y + 15) {
+                collisionIndex = i;
+              }
+            });
+  
+            if (collisionIndex !== -1) {
+              const temp = { ...symbols[collisionIndex] };
+              symbols[collisionIndex] = { ...symbols[index], x: temp.x, y: temp.y };
+              symbols[index] = { ...temp, x: offsetX, y: offsetY };
+              return symbols[index];
+            }
+  
+            return {
+              ...symbol,
+              x: offsetX,
+              y: offsetY,
+            };
+          }
         }
         return symbol;
       });
       setSymbols(updatedSymbols);
     }
   };
+  
+  
 
   const handleMouseUp = () => {
     setIsDragging(false);
-    setInitialPositions({});
+       setDragOffsets({});
   };
 
   return (
