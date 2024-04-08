@@ -37,13 +37,13 @@ const MainTaskComponent = () => {
   
   const selectSymbol = (index) => {
     const symbol = symbols[index];
-    setSelectedSymbol(symbol);
-    setSelectedSymbols([index]);
     const updatedSymbols = symbols.map((s, i) => ({
       ...s,
+      chosen: i === index,
       color: i === index ? 'red' : 'white',
     }));
     setSymbols(updatedSymbols);
+    setSelectedSymbols([index]);
   };
 
   const handleMouseDown = (e, index) => {
@@ -54,16 +54,19 @@ const MainTaskComponent = () => {
     } else {
       selectSymbol(index);
     }
-    setIsDragging(true);
-
-    const updatedOffsets = { ...dragOffsets }; 
-    selectedSymbols.forEach((i) => {
-      updatedOffsets[i] = {
-        x: e.clientX - symbols[i].x,
-        y: e.clientY - symbols[i].y,
-      };
-    });
-    setDragOffsets(updatedOffsets);
+     setIsDragging(true);
+     const updatedOffsets = { ...dragOffsets }; 
+     selectedSymbols.forEach((i) => {
+       updatedOffsets[i] = {
+         x: e.clientX - symbols[i].x,
+         y: e.clientY - symbols[i].y,
+       };
+     });
+     updatedOffsets[index] = {
+      x: e.clientX - symbols[index].x,
+      y: e.clientY - symbols[index].y,
+    };
+     setDragOffsets(updatedOffsets);
   };
 
   const toggleSymbolSelection = (index) => {
