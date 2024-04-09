@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SymbolSelector from './SymbolSelector';
 
 const MainTaskComponent = () => {
   const [inputTitle, setInputTitle] = useState('');
@@ -7,6 +8,12 @@ const MainTaskComponent = () => {
   const [selectedSymbols, setSelectedSymbols] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffsets, setDragOffsets] = useState({});
+  const [selectionBox, setSelectionBox] = useState({
+    startX: 0,
+    startY: 0,
+    endX: 0,
+    endY: 0,
+  });
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
@@ -67,6 +74,15 @@ const MainTaskComponent = () => {
       y: e.clientY - symbols[index].y,
     };
      setDragOffsets(updatedOffsets);
+     if (selectedSymbols.length === 0) {
+      setIsDragging(true);
+      setSelectionBox({
+        startX: e.clientX,
+        startY: e.clientY,
+        endX: e.clientX,
+        endY: e.clientY,
+      });
+    }
   };
 
   const toggleSymbolSelection = (index) => {
@@ -95,7 +111,6 @@ const MainTaskComponent = () => {
             const offsetX = e.clientX - dragOffsets[index].x;
             const offsetY = e.clientY - dragOffsets[index].y;
             
-      
             let collisionIndex = -1;
             symbols.forEach((s, i) => {
               if (i !== index && offsetX >= s.x && offsetX <= s.x + 15 && offsetY >= s.y && offsetY <= s.y + 15) {
@@ -105,9 +120,10 @@ const MainTaskComponent = () => {
   
             if (collisionIndex !== -1) {
               const temp = { ...symbols[collisionIndex] };
-              symbols[collisionIndex] = { ...symbols[index], x: temp.x, y: temp.y };
-              symbols[index] = { ...temp, x: offsetX, y: offsetY };
-              return symbols[index];
+              const updated = [...symbols];
+              updated[collisionIndex] = { ...symbols[index], x: temp.x, y: temp.y };
+              updated[index] = { ...temp, x: offsetX, y: offsetY };
+              return updated[index];
             }
   
             return {
@@ -121,13 +137,18 @@ const MainTaskComponent = () => {
       });
       setSymbols(updatedSymbols);
     }
+    if (selectedSymbols.length === 0) {
+      setSelectionBox({
+        ...selectionBox,
+        endX: e.clientX,
+        endY: e.clientY,
+      });
+    }
   };
   
-  
-
   const handleMouseUp = () => {
     setIsDragging(false);
-       setDragOffsets({});
+    setDragOffsets({});
   };
 
   return (
@@ -140,6 +161,20 @@ const MainTaskComponent = () => {
       />
       <button onClick={handleShow}>Press Me</button>
       <div style={{ position: 'relative' }}>
+      {selectionBox.startX !== 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${Math.min(selectionBox.startX, selectionBox.endX)}px`,
+            top: `${Math.min(selectionBox.startY, selectionBox.endY)}px`,
+            width: `${Math.abs(selectionBox.endX - selectionBox.startX)}px`,
+            height: `${Math.abs(selectionBox.endY - selectionBox.startY)}px`,
+            border: '1px dashed white',
+            opacity: 0.3,
+            zIndex: 999,
+          }}
+        />
+      )}
         {symbols.length > 0 && (
           <div>
             {symbols.map((symbol, index) => (
