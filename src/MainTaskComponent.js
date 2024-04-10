@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import SymbolSelector from './SymbolSelector';
 
 const MainTaskComponent = () => {
   const [inputTitle, setInputTitle] = useState('');
@@ -38,7 +37,15 @@ const MainTaskComponent = () => {
       x: 15 * index,
       y: 15,
     }));
-    setSymbols(symbolsArray);
+    const totalWidth = symbolsArray.length * 15; 
+    const centerOffset = (window.innerWidth - totalWidth) / 2; 
+
+    const centeredSymbolsArray = symbolsArray.map((symbol, index) => ({
+      ...symbol,
+      x: centerOffset + 15 * index, 
+    }));
+
+    setSymbols(centeredSymbolsArray);
     setInputTitle('');
   };
   
@@ -51,6 +58,16 @@ const MainTaskComponent = () => {
     }));
     setSymbols(updatedSymbols);
     setSelectedSymbols([index]);
+  };
+
+  const handleOuterMouseDown = (e) => {
+    setSelectionBox({
+      startX: e.clientX,
+      startY: e.clientY,
+      endX: e.clientX,
+      endY: e.clientY,
+    });
+    setIsDragging(true);
   };
 
   const handleMouseDown = (e, index) => {
@@ -73,16 +90,7 @@ const MainTaskComponent = () => {
       x: e.clientX - symbols[index].x,
       y: e.clientY - symbols[index].y,
     };
-     setDragOffsets(updatedOffsets);
-     if (selectedSymbols.length === 0) {
-      setIsDragging(true);
-      setSelectionBox({
-        startX: e.clientX,
-        startY: e.clientY,
-        endX: e.clientX,
-        endY: e.clientY,
-      });
-    }
+      setDragOffsets(updatedOffsets);
   };
 
   const toggleSymbolSelection = (index) => {
@@ -104,6 +112,50 @@ const MainTaskComponent = () => {
   };
 
   const handleMouseMove = (e) => {
+    if (isDragging && selectedSymbols.length === 0) {
+      setSelectionBox({
+        startX: selectionBox.startX,
+        startY: selectionBox.startY,
+        endX: e.pageX,
+        endY: e.pageY,
+      });
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+    
+        const updatedSymbols = symbols.map((symbol, index) => {
+          const symbolX = symbol.x;
+          const symbolY = symbol.y;
+          const symbolWidth = 15; // Assuming each symbol has a width of 15
+          const symbolHeight = 15; // Assuming each symbol has a height of 15
+    
+          const boxStartX = Math.min(selectionBox.startX, selectionBox.endX);
+          const boxEndX = Math.max(selectionBox.startX, selectionBox.endX);
+          const boxStartY = Math.min(selectionBox.startY, selectionBox.endY);
+          const boxEndY = Math.max(selectionBox.startY, selectionBox.endY);
+    
+          const symbolIsInSelection =
+            symbolX + symbolWidth >= boxStartX &&
+            symbolX <= boxEndX &&
+            symbolY + symbolHeight >= boxStartY &&
+            symbolY <= boxEndY;
+    
+          if (symbolIsInSelection) {
+            // If symbol is not already selected, toggle its selection
+            if (!selectedSymbols.includes(index)) {
+              toggleSymbolSelection(index);
+            }
+          } else {
+            // If symbol is selected but not in the selection box, toggle its selection
+            if (selectedSymbols.includes(index)) {
+              toggleSymbolSelection(index);
+            }
+          }
+          // Return the symbol with updated selection status
+          return symbol;
+        });
+    
+        setSymbols(updatedSymbols);
+    }
     if (isDragging && selectedSymbols.length > 0) {
       const updatedSymbols = symbols.map((symbol, index) => {
         if (selectedSymbols.includes(index)) {
@@ -137,13 +189,6 @@ const MainTaskComponent = () => {
       });
       setSymbols(updatedSymbols);
     }
-    if (selectedSymbols.length === 0) {
-      setSelectionBox({
-        ...selectionBox,
-        endX: e.clientX,
-        endY: e.clientY,
-      });
-    }
   };
   
   const handleMouseUp = () => {
@@ -153,6 +198,7 @@ const MainTaskComponent = () => {
 
   return (
     <>
+     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <input
         type="text"
         placeholder="Enter your sentence here..."
@@ -160,9 +206,17 @@ const MainTaskComponent = () => {
         onChange={(e) => setInputTitle(e.target.value)}
       />
       <button onClick={handleShow}>Press Me</button>
-      <div style={{ position: 'relative' }}>
-      {selectionBox.startX !== 0 && (
-        <div
+      <div
+        style={{ 
+          position: 'relative',
+          width: '100vw',
+          height: '85vh',
+          overflow: 'hidden',
+          cursor: isDragging ? 'grabbing' : 'auto',
+        }}
+        onMouseDown={handleOuterMouseDown}
+      >
+     <div
           style={{
             position: 'absolute',
             left: `${Math.min(selectionBox.startX, selectionBox.endX)}px`,
@@ -172,11 +226,13 @@ const MainTaskComponent = () => {
             border: '1px dashed white',
             opacity: 0.3,
             zIndex: 999,
+            display: isDragging ? 'block' : 'none',
           }}
         />
-      )}
         {symbols.length > 0 && (
-          <div>
+          <div style={{ 
+            display: 'flex',
+          }}>
             {symbols.map((symbol, index) => (
               <div
                 key={index}
@@ -194,6 +250,7 @@ const MainTaskComponent = () => {
             ))}
           </div>
         )}
+      </div>
       </div>
     </>
   );
