@@ -112,49 +112,47 @@ const MainTaskComponent = () => {
   };
 
   const handleMouseMove = (e) => {
+    e.preventDefault();
     if (isDragging && selectedSymbols.length === 0) {
+      const startX = Math.min(selectionBox.startX, e.clientX);
+      const startY = Math.min(selectionBox.startY, e.clientY);
+      const endX = Math.max(selectionBox.startX, e.clientX);
+      const endY = Math.max(selectionBox.startY, e.clientY);
+
       setSelectionBox({
-        startX: selectionBox.startX,
-        startY: selectionBox.startY,
-        endX: e.pageX,
-        endY: e.pageY,
+        startX: startX,
+        startY: startY,
+        endX: endX,
+        endY: endY,
       });
-        const mouseX = e.clientX;
-        const mouseY = e.clientY;
-    
-        const updatedSymbols = symbols.map((symbol, index) => {
-          const symbolX = symbol.x;
-          const symbolY = symbol.y;
-          const symbolWidth = 15; // Assuming each symbol has a width of 15
-          const symbolHeight = 15; // Assuming each symbol has a height of 15
-    
-          const boxStartX = Math.min(selectionBox.startX, selectionBox.endX);
-          const boxEndX = Math.max(selectionBox.startX, selectionBox.endX);
-          const boxStartY = Math.min(selectionBox.startY, selectionBox.endY);
-          const boxEndY = Math.max(selectionBox.startY, selectionBox.endY);
-    
-          const symbolIsInSelection =
-            symbolX + symbolWidth >= boxStartX &&
-            symbolX <= boxEndX &&
-            symbolY + symbolHeight >= boxStartY &&
-            symbolY <= boxEndY;
-    
-          if (symbolIsInSelection) {
-            // If symbol is not already selected, toggle its selection
-            if (!selectedSymbols.includes(index)) {
-              toggleSymbolSelection(index);
-            }
-          } else {
-            // If symbol is selected but not in the selection box, toggle its selection
-            if (selectedSymbols.includes(index)) {
-              toggleSymbolSelection(index);
-            }
-          }
-          // Return the symbol with updated selection status
-          return symbol;
-        });
-    
-        setSymbols(updatedSymbols);
+
+      const updatedSymbols = symbols.map((symbol, index) => {
+        const symbolX = symbol.x;
+        const symbolY = symbol.y;
+        const symbolWidth = 15; // Assuming each symbol has a width of 15
+        const symbolHeight = 15; // Assuming each symbol has a height of 15
+
+        const symbolIsWithinSelection =
+          symbolX >= startX &&
+          symbolX + symbolWidth <= endX &&
+          symbolY >= startY &&
+          symbolY + symbolHeight <= endY;
+
+        let chosen = symbol.chosen;
+        if (symbolIsWithinSelection) {
+          chosen = true;
+          // if (!selectedSymbols.includes(index)) {
+            toggleSymbolSelection(index);
+          // }
+        }
+        return {
+          ...symbol,
+          chosen: chosen,
+          color: chosen ? 'red' : 'white',
+        };
+      });
+
+      setSymbols(updatedSymbols);
     }
     if (isDragging && selectedSymbols.length > 0) {
       const updatedSymbols = symbols.map((symbol, index) => {
@@ -194,6 +192,13 @@ const MainTaskComponent = () => {
   const handleMouseUp = () => {
     setIsDragging(false);
     setDragOffsets({});
+      setSelectionBox({
+      startX: 0,
+      startY: 0,
+      endX: 0,
+      endY: 0,
+    });
+    
   };
 
   return (
@@ -214,7 +219,7 @@ const MainTaskComponent = () => {
           overflow: 'hidden',
           cursor: isDragging ? 'grabbing' : 'auto',
         }}
-        onMouseDown={handleOuterMouseDown}
+        onMouseDown={(e) => handleOuterMouseDown(e)}
       >
      <div
           style={{
