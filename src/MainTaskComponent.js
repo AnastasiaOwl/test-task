@@ -113,7 +113,8 @@ const MainTaskComponent = () => {
 
   const handleMouseMove = (e) => {
     e.preventDefault();
-    if (isDragging && selectedSymbols.length === 0) {
+    if (isDragging) {
+      if(selectedSymbols.length === 0 && !e.ctrlKey){
       const startX = Math.min(selectionBox.startX, e.clientX);
       const startY = Math.min(selectionBox.startY, e.clientY);
       const endX = Math.max(selectionBox.startX, e.clientX);
@@ -138,23 +139,19 @@ const MainTaskComponent = () => {
           symbolY >= startY &&
           symbolY + symbolHeight <= endY;
 
-        let chosen = symbol.chosen;
-        if (symbolIsWithinSelection) {
-          chosen = true;
-          // if (!selectedSymbols.includes(index)) {
-            toggleSymbolSelection(index);
-          // }
-        }
-        return {
-          ...symbol,
-          chosen: chosen,
-          color: chosen ? 'red' : 'white',
-        };
+          let chosen = selectedSymbols.includes(index);
+          if (symbolIsWithinSelection) {
+            chosen = true;
+          }
+          return {
+            ...symbol,
+            chosen: chosen,
+            color: chosen ? 'red' : 'white',
+          };
       });
-
       setSymbols(updatedSymbols);
     }
-    if (isDragging && selectedSymbols.length > 0) {
+    if (selectedSymbols.length > 0 ) {
       const updatedSymbols = symbols.map((symbol, index) => {
         if (selectedSymbols.includes(index)) {
           if (dragOffsets[index]) {
@@ -186,7 +183,8 @@ const MainTaskComponent = () => {
         return symbol;
       });
       setSymbols(updatedSymbols);
-    }
+  }
+}
   };
   
   const handleMouseUp = () => {
