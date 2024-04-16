@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 const MainTaskComponent = () => {
   const [inputTitle, setInputTitle] = useState('');
   const [symbols, setSymbols] = useState([]);
-  const [selectedSymbol, setSelectedSymbol] = useState(null);
   const [selectedSymbols, setSelectedSymbols] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffsets, setDragOffsets] = useState({});
@@ -129,90 +128,98 @@ const MainTaskComponent = () => {
   };
   
 
+  const handleSelectionBox = (e) => {
+      const startX = Math.min(selectionBox.startX, e.clientX);
+      const startY = Math.min(selectionBox.startY, e.clientY);
+      const endX = Math.max(selectionBox.startX, e.clientX);
+      const endY = Math.max(selectionBox.startY, e.clientY);
+
+      setSelectionBox({
+        startX: startX,
+        startY: startY,
+        endX: endX,
+        endY: endY,
+      });
+      const updatedSymbols = symbols.map((symbol, index) => {
+        const symbolX = symbol.x;
+        const symbolY = symbol.y;
+        const symbolWidth = 15;
+        const symbolHeight = 15;
+  
+        const symbolIsWithinSelection =
+          symbolX >= Math.min(startX, endX) &&
+          symbolX + symbolWidth <= Math.max(startX, endX) &&
+          symbolY >= Math.min(startY, endY) &&
+          symbolY + symbolHeight <= Math.max(startY, endY);
+  
+        let chosen = selectedSymbols.includes(index);
+        if (symbolIsWithinSelection) {
+          chosen = true;
+          if (!selectedSymbols.includes(index)) {
+            setSelectedSymbols((prevSelected) => [...prevSelected, index]);
+          }
+        } else {
+          if (!selectedSymbols.includes(index)) {
+            chosen = false;
+          }
+        }
+  
+        return {
+          ...symbol,
+          chosen: chosen,
+          color: chosen ? 'red' : 'white',
+        };
+      });
+  
+      setSymbols(updatedSymbols);
+  };
+
   const handleMouseMove = (e) => {
     e.preventDefault();
     if (isDragging) {
-      if(selectedSymbols.length === 0){
-        const startX = Math.min(selectionBox.startX, e.clientX);
-        const startY = Math.min(selectionBox.startY, e.clientY);
-        const endX = Math.max(selectionBox.startX, e.clientX);
-        const endY = Math.max(selectionBox.startY, e.clientY);
-    
-        setSelectionBox({
-          startX: startX,
-          startY: startY,
-          endX: endX,
-          endY: endY,
-        });
-    
+      if (selectedSymbols.length === 0) {
+        handleSelectionBox(e);
+      } else {
         const updatedSymbols = symbols.map((symbol, index) => {
-          const symbolX = symbol.x;
-          const symbolY = symbol.y;
-          const symbolWidth = 15;
-          const symbolHeight = 15;
-    
-          const symbolIsWithinSelection =
-        symbolX >= Math.min(startX, endX) &&
-        symbolX + symbolWidth <= Math.max(startX, endX) &&
-        symbolY >= Math.min(startY, endY) &&
-        symbolY + symbolHeight <= Math.max(startY, endY);
-        
-          let chosen = selectedSymbols.includes(index);
-          if (symbolIsWithinSelection) {
-            chosen = true;
-            if (!selectedSymbols.includes(index)) {
-              setSelectedSymbols((prevSelected) => [...prevSelected, index]);
-            }
-          } else {
-            if (!selectedSymbols.includes(index)) {
-              chosen = false;
-            }
-          }
-    
-          return {
-            ...symbol,
-            chosen: chosen,
-            color: chosen ? 'red' : 'white',
-          };
-        });
-    
-        setSymbols(updatedSymbols);
-    }
-    if (selectedSymbols.length > 0 ) {
-      const updatedSymbols = symbols.map((symbol, index) => {
-        if (selectedSymbols.includes(index)) {
-          if (dragOffsets[index]) {
-            const offsetX = e.clientX - dragOffsets[index].x;
-            const offsetY = e.clientY - dragOffsets[index].y;
-            
-            let collisionIndex = -1;
-            symbols.forEach((s, i) => {
-              if (i !== index && offsetX >= s.x && offsetX <= s.x + 15 && offsetY >= s.y && offsetY <= s.y + 15) {
-                collisionIndex = i;
+          if (selectedSymbols.includes(index)) {
+            if (dragOffsets[index]) {
+              const offsetX = e.clientX - dragOffsets[index].x;
+              const offsetY = e.clientY - dragOffsets[index].y;
+
+              let collisionIndex = -1;
+              symbols.forEach((s, i) => {
+                if (
+                  i !== index &&
+                  offsetX >= s.x &&
+                  offsetX <= s.x + 15 &&
+                  offsetY >= s.y &&
+                  offsetY <= s.y + 15
+                ) {
+                  collisionIndex = i;
+                }
+              });
+
+              if (collisionIndex !== -1) {
+                const temp = { ...symbols[collisionIndex] };
+                const updated = [...symbols];
+                updated[collisionIndex] = { ...symbols[index], x: temp.x, y: temp.y };
+                updated[index] = { ...temp, x: offsetX, y: offsetY };
+                return updated[index];
               }
-            });
-  
-            if (collisionIndex !== -1) {
-              const temp = { ...symbols[collisionIndex] };
-              const updated = [...symbols];
-              updated[collisionIndex] = { ...symbols[index], x: temp.x, y: temp.y };
-              updated[index] = { ...temp, x: offsetX, y: offsetY };
-              return updated[index];
+
+              return {
+                ...symbol,
+                x: offsetX,
+                y: offsetY,
+              };
             }
-  
-            return {
-              ...symbol,
-              x: offsetX,
-              y: offsetY,
-            };
           }
-        }
-        return symbol;
-      });
-      setSymbols(updatedSymbols);
-  }
-}
- };
+          return symbol;
+        });
+        setSymbols(updatedSymbols);
+      }
+    }
+  };
   
   const handleMouseUp = () => {
     setIsDragging(false);
