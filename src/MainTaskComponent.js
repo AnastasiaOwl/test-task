@@ -13,12 +13,12 @@ const MainTaskComponent = () => {
     endY: 0,
   });
   const [ctrlPressed, setCtrlPressed] = useState(false); 
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
 
-    // Event listener for Ctrl key
     const handleKeyDown = (e) => {
       if (e.ctrlKey || e.metaKey) {
         setCtrlPressed(true);
@@ -30,6 +30,7 @@ const MainTaskComponent = () => {
         setCtrlPressed(false);
       }
     };
+    
 
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('keyup', handleKeyUp);
@@ -129,10 +130,10 @@ const MainTaskComponent = () => {
   
 
   const handleSelectionBox = (e) => {
-      const startX = Math.min(selectionBox.startX, e.clientX);
-      const startY = Math.min(selectionBox.startY, e.clientY);
-      const endX = Math.max(selectionBox.startX, e.clientX);
-      const endY = Math.max(selectionBox.startY, e.clientY);
+    const startX = isDragging ? selectionBox.startX : Math.min(selectionBox.startX, e.clientX);
+    const startY = isDragging ? selectionBox.startY : Math.min(selectionBox.startY, e.clientY);
+    const endX = isDragging ? e.clientX : Math.max(selectionBox.startX, e.clientX);
+    const endY = isDragging ? e.clientY : Math.max(selectionBox.startY, e.clientY);
 
       setSelectionBox({
         startX: startX,
@@ -141,6 +142,7 @@ const MainTaskComponent = () => {
         endY: endY,
       });
       const updatedSymbols = symbols.map((symbol, index) => {
+        setIsResizing(true); 
         const symbolX = symbol.x;
         const symbolY = symbol.y;
         const symbolWidth = 15;
@@ -152,34 +154,26 @@ const MainTaskComponent = () => {
           symbolY >= Math.min(startY, endY) &&
           symbolY + symbolHeight <= Math.max(startY, endY);
   
-        let chosen = selectedSymbols.includes(index);
-        if (symbolIsWithinSelection) {
-          chosen = true;
-          if (!selectedSymbols.includes(index)) {
+          const chosen = symbolIsWithinSelection;
+          if (chosen && !selectedSymbols.includes(index)) {
             setSelectedSymbols((prevSelected) => [...prevSelected, index]);
+          } else if (!chosen && selectedSymbols.includes(index)) {
+            setSelectedSymbols((prevSelected) => prevSelected.filter((item) => item !== index));
           }
-        } else {
-          if (!selectedSymbols.includes(index)) {
-            chosen = false;
-          }
-        }
-  
-        return {
-          ...symbol,
-          chosen: chosen,
-          color: chosen ? 'red' : 'white',
-        };
+
+          return {
+            ...symbol,
+            chosen: chosen,
+            color: chosen ? 'red' : 'white',
+          };
       });
-  
       setSymbols(updatedSymbols);
   };
 
   const handleMouseMove = (e) => {
     e.preventDefault();
     if (isDragging) {
-      if (selectedSymbols.length === 0) {
-        handleSelectionBox(e);
-      } else {
+      if (selectedSymbols.length > 0 && !isResizing) {
         const updatedSymbols = symbols.map((symbol, index) => {
           if (selectedSymbols.includes(index)) {
             if (dragOffsets[index]) {
@@ -217,12 +211,15 @@ const MainTaskComponent = () => {
           return symbol;
         });
         setSymbols(updatedSymbols);
+      } else{
+        handleSelectionBox(e);
       }
     }
   };
   
   const handleMouseUp = () => {
     setIsDragging(false);
+    setIsResizing(false); 
     setDragOffsets({});
       setSelectionBox({
       startX: 0,
